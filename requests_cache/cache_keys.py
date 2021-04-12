@@ -1,4 +1,3 @@
-import hashlib
 import json
 from operator import itemgetter
 from typing import Iterable, List, Mapping, Tuple, Union
@@ -18,21 +17,17 @@ def create_key(
     **kwargs,
 ) -> str:
     """Create a normalized cache key from a request object"""
-    key = hashlib.sha256()
-    key.update(_encode(request.method.upper()))
-    url = remove_ignored_url_params(request, ignored_params)
-    url = url_normalize(url)
-    key.update(_encode(url))
-    key.update(_encode(kwargs.get('verify', True)))
+    key = [ request.method.upper(),
+            url_normalize(remove_ignored_url_params(request, ignored_params)),
+            kwargs.get('verify', True),
+            remove_ignored_body_params(request, ignored_params)
+          ]
 
-    body = remove_ignored_body_params(request, ignored_params)
-    if body:
-        key.update(_encode(body))
     if include_get_headers and request.headers != DEFAULT_HEADERS:
         for name, value in normalize_dict(request.headers).items():
-            key.update(_encode(f'{name}={value}'))
+            key.append(f'{name}={value}')
 
-    return key.hexdigest()
+    return ' '.join(map(str, key))
 
 
 def remove_ignored_url_params(request: requests.PreparedRequest, ignored_params: Iterable[str]) -> str:
